@@ -167,9 +167,9 @@ export function QueueView() {
             </div>
 
             {filtersOpen && (
-              <div className="flex justify-end border-t border-line pt-3">
-                <div className="w-full rounded-md border border-line bg-surface-muted/70 p-3 lg:max-w-[680px]">
-                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-[minmax(160px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] lg:items-end">
+              <div className="border-t border-line pt-3">
+                <div className="mx-auto w-full max-w-3xl rounded-md border border-line bg-surface-muted/70 p-3">
+                  <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
                     <AgeGroupField
                       value={ageGroup}
                       onChange={(value) =>
@@ -212,7 +212,7 @@ export function QueueView() {
                             page: null,
                           })
                         }
-                        className="h-9 rounded-md border border-line bg-surface px-3 text-[13px] font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink sm:col-span-3 lg:col-span-1"
+                        className="h-9 rounded-md border border-line bg-surface px-4 text-[13px] font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink sm:col-span-3 sm:justify-self-end"
                       >
                         Clear
                       </button>
