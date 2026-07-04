@@ -58,11 +58,38 @@ jobs:
 
       - name: Configure SSH
         shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
+          set -eu
+          if [ -z "$VPS_HOST" ]; then
+            echo "::error::VPS_HOST secret is missing. Use only the server IP/hostname, without ssh:// and without user@."
+            exit 1
+          fi
+          if [ -z "$VPS_USER" ]; then
+            echo "::error::VPS_USER secret is missing."
+            exit 1
+          fi
+          if [ -z "$VPS_SSH_KEY" ]; then
+            echo "::error::VPS_SSH_KEY secret is missing. Paste the full private key, including BEGIN and END lines."
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config << 'SSH_CONFIG'
+          Host *
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+          SSH_CONFIG
+          chmod 600 ~/.ssh/config
+
+          ssh-keyscan -T 20 -H "$VPS_HOST" >> ~/.ssh/known_hosts || \
+            echo "::warning::Could not pre-scan VPS host key; SSH will still try to accept it on first connection."
+          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "echo SSH connection ready"
 
       - name: Copy production compose file
         shell: bash
