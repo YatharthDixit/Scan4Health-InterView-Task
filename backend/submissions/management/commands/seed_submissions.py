@@ -14,7 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from submissions.constants import Status
-from submissions.models import StatusEvent, Submission
+from submissions.models import ReviewComment, StatusEvent, Submission
 
 # (name, age, phone, concern, final_status)
 SEED_DATA = [
@@ -42,6 +42,18 @@ PATHS = {
     Status.IN_REVIEW: [(Status.NEW, Status.IN_REVIEW)],
     Status.APPROVED: [(Status.NEW, Status.IN_REVIEW), (Status.IN_REVIEW, Status.APPROVED)],
     Status.REJECTED: [(Status.NEW, Status.IN_REVIEW), (Status.IN_REVIEW, Status.REJECTED)],
+}
+
+COMMENT_SEEDS = {
+    "Meera Krishnan": [
+        ("Front desk", "Referral note mentions worsening pain after standing."),
+    ],
+    "Rahul Verma": [
+        ("Reviewer", "Confirm if prior knee imaging is available before approval."),
+    ],
+    "Devendra Singh": [
+        ("Reviewer", "Cardiology referral looks complete; check contrast allergy field."),
+    ],
 }
 
 
@@ -93,6 +105,16 @@ class Command(BaseCommand):
                 StatusEvent.objects.filter(pk=event.pk).update(created_at=step_time)
                 Submission.objects.filter(pk=submission.pk).update(
                     updated_at=step_time
+                )
+
+            for author, body in COMMENT_SEEDS.get(name, []):
+                comment = ReviewComment.objects.create(
+                    submission=submission,
+                    author=author,
+                    body=body,
+                )
+                ReviewComment.objects.filter(pk=comment.pk).update(
+                    created_at=step_time + timedelta(minutes=20)
                 )
 
         self.stdout.write(

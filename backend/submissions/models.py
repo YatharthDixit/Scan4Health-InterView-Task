@@ -44,3 +44,20 @@ class StatusEvent(models.Model):
 
     def __str__(self) -> str:
         return f"#{self.submission_id}: {self.from_status} → {self.to_status}"
+
+
+class ReviewComment(models.Model):
+    """Free-text review notes left by staff while triaging an intake."""
+
+    submission = models.ForeignKey(
+        Submission, on_delete=models.CASCADE, related_name="comments"
+    )
+    author = models.CharField(max_length=80, default="Reviewer")
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"#{self.submission_id}: {self.author}"
