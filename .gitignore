@@ -1,0 +1,23 @@
+# Planning notes (not part of the submission)
+given-task.txt
+plan-info.txt
+tech-plan.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.sqlite3
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+npm-debug.log*
+
+# Env & editor
+.env
+.DS_Store
+.claude/
