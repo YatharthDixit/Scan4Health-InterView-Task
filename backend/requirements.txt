@@ -1,5 +1,6 @@
 Django>=5.2,<5.3
 djangorestframework>=3.16
 django-cors-headers>=4.4
+gunicorn>=23.0
 pytest>=8.0
 pytest-django>=4.8

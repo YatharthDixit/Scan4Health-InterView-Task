@@ -82,6 +82,24 @@ Open `http://localhost:3000`.
 
 The frontend defaults to `http://localhost:8000/api`. Override with `NEXT_PUBLIC_API_URL`; see `frontend/.env.example`.
 
+### Docker
+
+Docker is optional; the plain local commands above are still the simplest way to review the code.
+
+```bash
+# Build and start backend + frontend containers.
+# The backend container runs migrations and seeds demo data on first start.
+docker compose up --build
+```
+
+Open `http://localhost:3000`.
+
+The local Docker setup uses:
+
+- `backend/Dockerfile`: Python runtime, migrations, optional seed, Gunicorn on port `8000`
+- `frontend/Dockerfile`: Next.js standalone production build on port `3000`
+- `compose.yaml`: local two-service stack with a persistent SQLite volume
+
 ## API Overview
 
 | Method | Path | Purpose |
@@ -171,10 +189,52 @@ npx tsc --noEmit
 
 `next build --webpack` is used for verification because Turbopack may try to spawn a local helper process that binds a port in restricted sandboxed environments.
 
+## CI and VPS Deployment
+
+GitHub Actions are included in `.github/workflows`.
+
+`ci.yml` runs on pushes and pull requests:
+
+- backend tests
+- Django system checks
+- migration drift check
+- frontend lint
+- frontend production build
+- TypeScript type check
+
+`deploy.yml` builds backend/frontend Docker images, pushes them to GitHub Container Registry, copies `docker-compose.prod.yml` to a VPS, and runs `docker compose up -d`.
+
+Required GitHub repository variable:
+
+```text
+NEXT_PUBLIC_API_URL=https://your-domain.example/api
+```
+
+Required GitHub secrets:
+
+```text
+VPS_HOST=<server ip or hostname>
+VPS_USER=<ssh user>
+VPS_SSH_KEY=<private ssh key with access to the server>
+VPS_APP_DIR=/opt/scan4health
+DJANGO_SECRET_KEY=<strong secret>
+DJANGO_ALLOWED_HOSTS=your-domain.example,<server ip>
+FRONTEND_ORIGIN=https://your-domain.example
+```
+
+Optional GitHub secrets:
+
+```text
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
+SEED_DEMO_DATA=false
+```
+
+The VPS must already have Docker and the Docker Compose plugin installed. TLS and reverse proxying are intentionally left to the server owner; a common setup is Nginx or Caddy forwarding `/api` to the backend port and the root path to the frontend port.
+
 ## Deliberate Scope
 
 - No authentication or staff identity; the assignment did not require auth, and adding it would distract from the state-machine core.
-- No Docker; local commands are short and explicit.
 - No realtime updates; TanStack Query refetching and server-side conflict handling cover the current workflow.
 - No generic admin CRUD; status movement is intentionally constrained to the transition action.
 
