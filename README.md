@@ -4,6 +4,12 @@ Full-stack take-home for the ScanOS intake queue assignment. The app models a di
 
 The implementation prioritizes the core grading signal from the brief: the status state machine is enforced on the backend, surfaced clearly to the frontend, and protected against invalid or stale writes.
 
+## Project Links
+
+- Repository: [YatharthDixit/Scan4Health-InterView-Task](https://github.com/YatharthDixit/Scan4Health-InterView-Task)
+- Live deployment: [scan4health.yath.dev](https://scan4health.yath.dev)
+- CI/CD: GitHub Actions runs checks, builds Docker images, publishes them to GitHub Container Registry, and deploys to a VPS on `main`.
+
 ## Stack
 
 - Backend: Django 5.2, Django REST Framework, SQLite
@@ -193,7 +199,10 @@ npx tsc --noEmit
 
 ## CI and VPS Deployment
 
-GitHub Actions are included in `.github/workflows`.
+GitHub Actions are included in `.github/workflows`. The repository is set up
+for CI/CD: code pushed to `main` is checked, packaged into Docker images, pushed
+to GitHub Container Registry, and deployed to the VPS serving
+`https://scan4health.yath.dev`.
 
 `ci.yml` runs on pushes and pull requests:
 
@@ -204,7 +213,10 @@ GitHub Actions are included in `.github/workflows`.
 - frontend production build
 - TypeScript type check
 
-`deploy.yml` builds backend/frontend Docker images, pushes them to GitHub Container Registry, copies `docker-compose.prod.yml` to a VPS, and runs `docker compose up -d`.
+`deploy.yml` runs on pushes to `main` and can also be triggered manually from
+the GitHub Actions tab. It builds backend/frontend Docker images, pushes them to
+GitHub Container Registry, copies `docker-compose.prod.yml` to a VPS, writes the
+runtime `.env`, and runs `docker compose up -d`.
 
 Required GitHub secrets:
 
@@ -212,11 +224,14 @@ Required GitHub secrets:
 VPS_HOST=<server ip or hostname>
 VPS_USER=<ssh user>
 VPS_SSH_KEY=<private ssh key with access to the server>
-VPS_APP_DIR=/opt/scan4health
+VPS_APP_DIR=/home/yath/scan4health
 DJANGO_SECRET_KEY=<strong secret>
 DJANGO_ALLOWED_HOSTS=your-domain.example,<server ip>
 FRONTEND_ORIGIN=https://your-domain.example
 ```
+
+Keep one-line secrets such as `VPS_HOST`, `VPS_USER`, and `VPS_APP_DIR` free of
+extra newlines or spaces. `VPS_SSH_KEY` is the one expected multiline value.
 
 Optional GitHub secrets:
 

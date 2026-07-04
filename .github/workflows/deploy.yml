@@ -64,6 +64,12 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           set -eu
+          one_line() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+          VPS_HOST="$(one_line "$VPS_HOST")"
+          VPS_USER="$(one_line "$VPS_USER")"
+
           if [ -z "$VPS_HOST" ]; then
             echo "::error::VPS_HOST secret is missing. Use only the server IP/hostname, without ssh:// and without user@."
             exit 1
@@ -93,30 +99,82 @@ jobs:
 
       - name: Copy production compose file
         shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p '${{ secrets.VPS_APP_DIR }}'"
-          scp docker-compose.prod.yml "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_APP_DIR }}/docker-compose.yml"
+          set -eu
+          one_line() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+          VPS_HOST="$(one_line "$VPS_HOST")"
+          VPS_USER="$(one_line "$VPS_USER")"
+          VPS_APP_DIR="$(one_line "$VPS_APP_DIR")"
+
+          if [ -z "$VPS_APP_DIR" ]; then
+            echo "::error::VPS_APP_DIR secret is missing."
+            exit 1
+          fi
+
+          remote_dir="$(printf '%q' "$VPS_APP_DIR")"
+          ssh "$VPS_USER@$VPS_HOST" "mkdir -p $remote_dir"
+          scp docker-compose.prod.yml "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/docker-compose.yml"
 
       - name: Deploy on VPS
         shell: bash
+        env:
+          GHCR_IMAGE_PREFIX: ${{ steps.images.outputs.prefix }}
+          IMAGE_TAG: latest
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+          FRONTEND_PORT: ${{ secrets.FRONTEND_PORT }}
+          SEED_DEMO_DATA: ${{ secrets.SEED_DEMO_DATA }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'REMOTE'
           set -eu
-          cd "${{ secrets.VPS_APP_DIR }}"
+          one_line() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
 
-          cat > .env << 'ENV'
-          GHCR_IMAGE_PREFIX=${{ steps.images.outputs.prefix }}
-          IMAGE_TAG=latest
-          DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
-          DJANGO_ALLOWED_HOSTS=${{ secrets.DJANGO_ALLOWED_HOSTS }}
-          FRONTEND_ORIGIN=${{ secrets.FRONTEND_ORIGIN }}
-          BACKEND_PORT=${{ secrets.BACKEND_PORT }}
-          FRONTEND_PORT=${{ secrets.FRONTEND_PORT }}
-          SEED_DEMO_DATA=${{ secrets.SEED_DEMO_DATA }}
-          ENV
+          VPS_HOST="$(one_line "$VPS_HOST")"
+          VPS_USER="$(one_line "$VPS_USER")"
+          VPS_APP_DIR="$(one_line "$VPS_APP_DIR")"
+          DJANGO_ALLOWED_HOSTS="$(one_line "$DJANGO_ALLOWED_HOSTS")"
+          FRONTEND_ORIGIN="$(one_line "$FRONTEND_ORIGIN")"
+          BACKEND_PORT="$(one_line "$BACKEND_PORT")"
+          FRONTEND_PORT="$(one_line "$FRONTEND_PORT")"
+          SEED_DEMO_DATA="$(one_line "$SEED_DEMO_DATA")"
 
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker compose pull
-          docker compose up -d
-          docker image prune -f
-          REMOTE
+          env_value() {
+            # Compose .env files parse single-quoted values literally, so this
+            # keeps symbols in secrets from being treated as interpolation.
+            printf "'%s'" "$(printf '%s' "$1" | sed "s/'/\\\\'/g")"
+          }
+
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          {
+            printf 'GHCR_IMAGE_PREFIX=%s\n' "$(env_value "$GHCR_IMAGE_PREFIX")"
+            printf 'IMAGE_TAG=%s\n' "$(env_value "$IMAGE_TAG")"
+            printf 'DJANGO_SECRET_KEY=%s\n' "$(env_value "$DJANGO_SECRET_KEY")"
+            printf 'DJANGO_ALLOWED_HOSTS=%s\n' "$(env_value "$DJANGO_ALLOWED_HOSTS")"
+            printf 'FRONTEND_ORIGIN=%s\n' "$(env_value "$FRONTEND_ORIGIN")"
+            printf 'BACKEND_PORT=%s\n' "$(env_value "$BACKEND_PORT")"
+            printf 'FRONTEND_PORT=%s\n' "$(env_value "$FRONTEND_PORT")"
+            printf 'SEED_DEMO_DATA=%s\n' "$(env_value "$SEED_DEMO_DATA")"
+          } > "$env_file"
+
+          scp "$env_file" "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/.env"
+
+          remote_dir="$(printf '%q' "$VPS_APP_DIR")"
+          printf '%s\n' "$GHCR_TOKEN" | ssh "$VPS_USER@$VPS_HOST" "cd $remote_dir && docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          ssh "$VPS_USER@$VPS_HOST" "cd $remote_dir && docker compose pull"
+          ssh "$VPS_USER@$VPS_HOST" "cd $remote_dir && docker compose up -d"
+          ssh "$VPS_USER@$VPS_HOST" "docker image prune -f"
