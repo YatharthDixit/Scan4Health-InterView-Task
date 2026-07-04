@@ -10,8 +10,10 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Set `NEXT_PUBLIC_API_URL` if the Django API is not running at
-`http://localhost:8000/api`.
+For local review, the app defaults to `http://localhost:8000/api`.
+Production Docker builds can use a same-origin `/api` value when Nginx proxies
+API traffic on the same domain. Set `NEXT_PUBLIC_API_URL` only when the Django
+API is hosted on a different origin.
 
 ## Verify
 

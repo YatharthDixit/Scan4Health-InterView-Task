@@ -80,7 +80,9 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The frontend defaults to `http://localhost:8000/api`. Override with `NEXT_PUBLIC_API_URL`; see `frontend/.env.example`.
+The frontend defaults to `http://localhost:8000/api` for local review, so no
+frontend env file is required unless the API is running somewhere else. Override
+with `NEXT_PUBLIC_API_URL`; see `frontend/.env.example`.
 
 ### Docker
 
@@ -204,12 +206,6 @@ GitHub Actions are included in `.github/workflows`.
 
 `deploy.yml` builds backend/frontend Docker images, pushes them to GitHub Container Registry, copies `docker-compose.prod.yml` to a VPS, and runs `docker compose up -d`.
 
-Required GitHub repository variable:
-
-```text
-NEXT_PUBLIC_API_URL=https://your-domain.example/api
-```
-
 Required GitHub secrets:
 
 ```text
@@ -229,6 +225,17 @@ BACKEND_PORT=8000
 FRONTEND_PORT=3000
 SEED_DEMO_DATA=false
 ```
+
+Optional GitHub repository variable:
+
+```text
+NEXT_PUBLIC_API_URL=https://your-domain.example/api
+```
+
+The deploy workflow falls back to same-origin `/api`, which is the expected
+setup when Nginx serves the frontend and proxies `/api/` to Django on one
+domain. Set `NEXT_PUBLIC_API_URL` only if the frontend and API are hosted on
+different public origins.
 
 The VPS must already have Docker and the Docker Compose plugin installed. TLS and reverse proxying are intentionally left to the server owner; a common setup is Nginx or Caddy forwarding `/api` to the backend port and the root path to the frontend port.
 

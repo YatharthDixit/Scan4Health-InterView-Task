@@ -51,7 +51,7 @@ jobs:
           context: ./frontend
           push: true
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api' }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || '/api' }}
           tags: |
             ${{ steps.images.outputs.prefix }}-frontend:latest
             ${{ steps.images.outputs.prefix }}-frontend:${{ steps.images.outputs.sha_tag }}
